@@ -14,6 +14,8 @@ class Api extends CI_Controller
 
 		$this->load->model('screenshots');
 		$this->load->model('messages');
+		$this->load->model('images');
+		$this->load->model('conversation');
 	}
 
 	function index()
@@ -26,7 +28,7 @@ class Api extends CI_Controller
 		$config['upload_path']		= "./assets/images";
 		$config['allowed_types']	= 'gif|jpg|jpeg|png';
 		$config['encrypt_name'] 	= TRUE;
-		$config['max_size']     	= '100000';
+		$config['max_size']     	= '255240412';
 
 		$this->load->library('upload', $config);
 	}
@@ -43,14 +45,13 @@ class Api extends CI_Controller
 				'file_path' => "/assets/images/" . $data['upload_data']['file_name']
 			);
 			$id = $this->screenshots->insert($result['file_name'], $result['file_path']);
-			
+
 			$result = array(
 				'file_name' => $data['upload_data']['file_name'],
 				'file_path' => "/assets/images/" . $data['upload_data']['file_name'],
 				'file_id' => $id
 			);
 			$this->output->set_content_type('application/json')->set_output(json_encode($result));
-
 		}
 	}
 
@@ -78,7 +79,7 @@ class Api extends CI_Controller
 		}
 	}
 
-	function screen_upload()
+	function image_insert()
 	{
 		$this->_config();
 		if ($this->upload->do_upload("file") == FALSE) {
@@ -89,16 +90,103 @@ class Api extends CI_Controller
 				'file_name' => $data['upload_data']['file_name'],
 				'file_path' => "/assets/images/" . $data['upload_data']['file_name']
 			);
+			$id = $this->images->insert($result['file_name'], $result['file_path']);
+
+			$result = array(
+				'file_name' => $data['upload_data']['file_name'],
+				'file_path' => "/assets/images/" . $data['upload_data']['file_name'],
+				'file_id' => $id
+			);
 			$this->output->set_content_type('application/json')->set_output(json_encode($result));
 		}
 	}
 
-	function message_insert()
+	function image_getAll()
 	{
-		if ($this->input->post('images') == NULL || $this->input->post('sender') == NULL || $this->input->post('state') == NULL || $this->input->post('time') == NULL) {
+		$result = $this->images->getAll();
+		if ($result) {
+			$this->output->set_content_type('application/json')->set_output(json_encode($result));
+		} else {
+			$this->output->set_content_type('application/json')->set_output("database error!");
+		}
+	}
+
+	function image_getById()
+	{
+		if ($this->input->post('id') == NULL) {
 			$this->output->set_content_type('application/json')->set_output("unkown error!");
 		} else {
-			$result = $this->messages->insert($this->input->post('images'), $this->input->post('sender'), $this->input->post('state'), $this->input->post('time'));
+			$result = $this->images->getById($this->input->post('id'));
+			if ($result) {
+				$this->output->set_content_type('application/json')->set_output(json_encode($result));
+			} else {
+				$this->output->set_content_type('application/json')->set_output("database error!");
+			}
+		}
+	}
+
+	function conversation_insert()
+	{
+		if ($this->input->post('time') == NULL) {
+			$this->output->set_content_type('application/json')->set_output("error!");
+		} else {
+			$result = $this->conversation->insert($this->input->post('time'));
+			if ($result) {
+				$this->output->set_content_type('application/json')->set_output($result);
+			} else {
+				$this->output->set_content_type('application/json')->set_output("error!");
+			}
+		}
+		
+	}
+
+
+	function conversation_getByTime()
+	{
+		if ($this->input->post('time') == NULL) {
+			$this->output->set_content_type('application/json')->set_output("error!");
+		} else {
+			$con_id = $this->conversation->getByDate($this->input->post('time'));
+			$result = $this->messages->deleteByConId($con_id);
+			if ($result) {
+				$this->output->set_content_type('application/json')->set_output(json_encode($con_id));
+			} else {
+				$this->output->set_content_type('application/json')->set_output("database error!");
+			}
+		}
+	}
+
+	function conversation_getAll()
+	{
+		$result = $this->conversation->getAll();
+		if ($result) {
+			$this->output->set_content_type('application/json')->set_output(json_encode($result));
+		} else {
+			$this->output->set_content_type('application/json')->set_output("database error!");
+		}
+	}
+
+
+	function message_insert()
+	{
+		if ($this->input->post('sender') == NULL || $this->input->post('state') == NULL || $this->input->post('time') == NULL || $this->input->post('con_id') == NULL) {
+			$this->output->set_content_type('application/json')->set_output("unkown error!");
+		} else {
+			$result = $this->messages->insert($this->input->post('images'), $this->input->post('sender'), $this->input->post('state'), $this->input->post('time'), $this->input->post('message'), $this->input->post('con_id') );
+			if ($result) {
+				$this->output->set_content_type('application/json')->set_output(json_encode($result));
+			} else {
+				$this->output->set_content_type('application/json')->set_output("database error!");
+			}
+		}
+	}
+
+	function message_deleteByConId()
+	{
+		if ($this->input->post('con_id') == NULL) {
+			$this->output->set_content_type('application/json')->set_output("unkown error!");
+		} else {
+			$result = $this->messages->deleteByConId($this->input->post('con_id'));
 			if ($result) {
 				$this->output->set_content_type('application/json')->set_output(json_encode($result));
 			} else {
@@ -117,12 +205,14 @@ class Api extends CI_Controller
 		}
 	}
 
-	function message_getById()
+	function message_getByDate()
 	{
-		if ($this->input->post('id') == NULL) {
+		if ($this->input->post('date') == NULL) {
 			$this->output->set_content_type('application/json')->set_output("unkown error!");
 		} else {
-			$result = $this->messages->getById($this->input->post('id'));
+			$con_id = $this->conversation->getByDate($this->input->post('date'));
+			
+			$result = $this->messages->getByConId($con_id);
 			if ($result) {
 				$this->output->set_content_type('application/json')->set_output(json_encode($result));
 			} else {

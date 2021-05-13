@@ -2,19 +2,32 @@
 class Messages extends CI_Model
 {
 
-	function insert($images, $sender, $state, $time)
+	function insert($images, $sender, $state, $time, $message, $con_id)
 	{
 		$data = array(
 			'images' => $images,
 			'sender' => $sender,
 			'state' => $state,
-			'time' => $time
+			'time' => $time,
+			'message' => $message,
+			'con_id' => $con_id
 		);
 		$result = $this->db->insert('tb_messages', $data);
 		return $result;
 	}
 
-	function getData()
+	function deleteByConId($con_id)
+	{
+		$data = array(
+			'con_id' => $con_id,
+		);
+	
+		$result = $this->db->delete('tb_messages', $data);
+
+		return $result;
+	}
+
+	function getAll()
 	{
 		return $this->db->get('tb_messages')->result();
 	}
@@ -25,11 +38,10 @@ class Messages extends CI_Model
 		return $query->row();
 	}
 
-	function update($id, $which, $value)
+	function getByConId($con_id)
 	{
-		$this->db->where('id', $id);
-		$result = $this->db->update($which, $value);
-		return $result;
+		$query = $this->db->get_where('tb_messages', array('con_id' => $con_id));
+		return $query->result();
 	}
 
 	function deleteAll()
